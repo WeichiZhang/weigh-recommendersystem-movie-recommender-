@@ -1,35 +1,42 @@
-// enhanced-two-tower.js
+// two-tower.js - FIXED VERSION WITH SAMPLE DATA
 class EnhancedTwoTower {
     constructor() {
-        this.userEmbeddings = null;
-        this.itemEmbeddings = null;
-        this.movieData = null;
+        this.movieData = this.createSampleMovies();
         this.llmFeatures = {};
         this.initialized = false;
+        console.log("Enhanced Two-Tower initialized with sample data");
+    }
+
+    createSampleMovies() {
+        return [
+            { id: 1, title: "When Harry Met Sally", year: 1989, genres: ["comedy", "romance"] },
+            { id: 2, title: "Pretty Woman", year: 1990, genres: ["romance", "comedy"] },
+            { id: 3, title: "10 Things I Hate About You", year: 1999, genres: ["comedy", "romance"] },
+            { id: 4, title: "The Notebook", year: 2004, genres: ["romance", "drama"] },
+            { id: 5, title: "Crazy Rich Asians", year: 2018, genres: ["comedy", "romance"] },
+            { id: 6, title: "La La Land", year: 2016, genres: ["romance", "drama", "musical"] },
+            { id: 7, title: "The Silence of the Lambs", year: 1991, genres: ["thriller", "drama"] },
+            { id: 8, title: "Se7en", year: 1995, genres: ["thriller", "crime"] },
+            { id: 9, title: "The Dark Knight", year: 2008, genres: ["action", "thriller"] },
+            { id: 10, title: "Inception", year: 2010, genres: ["action", "sci-fi"] },
+            { id: 11, title: "The Shawshank Redemption", year: 1994, genres: ["drama"] },
+            { id: 12, title: "Pulp Fiction", year: 1994, genres: ["crime", "drama"] },
+            { id: 13, title: "Forrest Gump", year: 1994, genres: ["drama", "romance"] },
+            { id: 14, title: "The Godfather", year: 1972, genres: ["crime", "drama"] },
+            { id: 15, title: "The Matrix", year: 1999, genres: ["action", "sci-fi"] }
+        ];
     }
 
     async initialize() {
         if (this.initialized) return;
         
         try {
-            // Load your existing embeddings and data
-            await this.loadModelData();
             await this.generateLLMFeatures();
             this.initialized = true;
-            console.log("Enhanced Two-Tower with LLM features initialized");
+            console.log("Enhanced Two-Tower with LLM features ready");
         } catch (error) {
             console.error("Initialization failed:", error);
         }
-    }
-
-    async loadModelData() {
-        // Load your existing user and item embeddings
-        // This should match your current data loading logic
-        const response = await fetch('data/embeddings.json');
-        const data = await response.json();
-        this.userEmbeddings = data.userEmbeddings;
-        this.itemEmbeddings = data.itemEmbeddings;
-        this.movieData = data.movies;
     }
 
     async generateLLMFeatures() {
@@ -40,275 +47,183 @@ class EnhancedTwoTower {
     }
 
     extractLLMFeatures(movie) {
-        // Simulate LLM feature extraction based on movie title and genres
         const title = movie.title.toLowerCase();
-        const genres = movie.genres ? movie.genres.toLowerCase() : '';
-        
-        // Genre detection
-        const detectedGenres = this.detectGenres(title + ' ' + genres);
-        
-        // Theme extraction
-        const themes = this.extractThemes(title);
-        
-        // Tone analysis
-        const tone = this.analyzeTone(title);
+        const genres = movie.genres || [];
         
         return {
-            genres: detectedGenres,
-            themes: themes,
-            tone: tone,
-            target_audience: this.determineAudience(detectedGenres)
+            genres: genres,
+            themes: this.extractThemes(title, genres),
+            tone: this.analyzeTone(title, genres),
+            target_audience: this.determineAudience(genres)
         };
     }
 
-    detectGenres(text) {
-        const genres = [];
-        const genreKeywords = {
-            'action': ['action', 'adventure', 'fight', 'battle', 'mission'],
-            'comedy': ['comedy', 'funny', 'humor', 'laugh'],
-            'drama': ['drama', 'emotional', 'relationship', 'family'],
-            'thriller': ['thriller', 'suspense', 'mystery', 'crime'],
-            'sci-fi': ['sci-fi', 'science fiction', 'space', 'alien', 'future'],
-            'romance': ['romance', 'love', 'relationship'],
-            'horror': ['horror', 'scary', 'terror', 'fear'],
-            'documentary': ['documentary', 'real story', 'biography']
-        };
-
-        for (const [genre, keywords] of Object.entries(genreKeywords)) {
-            if (keywords.some(keyword => text.includes(keyword))) {
-                genres.push(genre);
-            }
-        }
-
-        return genres.length > 0 ? genres : ['drama'];
-    }
-
-    extractThemes(title) {
+    extractThemes(title, genres) {
         const themes = [];
-        const themeKeywords = {
-            'friendship': ['friend', 'buddy', 'companion'],
-            'love': ['love', 'romance', 'relationship'],
-            'betrayal': ['betray', 'treason', 'deception'],
-            'revenge': ['revenge', 'vengeance'],
-            'justice': ['justice', 'law', 'court'],
-            'survival': ['survive', 'survival'],
-            'identity': ['identity', 'self-discovery'],
-            'technology': ['technology', 'computer', 'AI', 'robot']
-        };
-
-        for (const [theme, keywords] of Object.entries(themeKeywords)) {
-            if (keywords.some(keyword => title.includes(keyword))) {
-                themes.push(theme);
-            }
+        
+        if (title.includes('love') || title.includes('romance') || genres.includes('romance')) {
+            themes.push('romance');
+        }
+        if (title.includes('friend') || title.includes('buddy')) {
+            themes.push('friendship');
+        }
+        if (title.includes('family') || title.includes('parent')) {
+            themes.push('family');
+        }
+        if (title.includes('comedy') || title.includes('funny') || genres.includes('comedy')) {
+            themes.push('comedy');
+        }
+        if (title.includes('crime') || title.includes('detective') || title.includes('murder')) {
+            themes.push('crime');
+        }
+        if (title.includes('action') || title.includes('adventure') || title.includes('fight')) {
+            themes.push('action');
+        }
+        if (title.includes('sci-fi') || title.includes('future') || title.includes('space')) {
+            themes.push('science fiction');
         }
 
         return themes.length > 0 ? themes : ['human experience'];
     }
 
-    analyzeTone(title) {
-        const toneIndicators = {
-            'dark': ['dark', 'grim', 'death', 'tragic'],
-            'lighthearted': ['funny', 'happy', 'joy', 'comedy'],
-            'serious': ['serious', 'dramatic', 'emotional'],
-            'suspenseful': ['suspense', 'mystery', 'thriller'],
-            'inspirational': ['inspire', 'hope', 'triumph']
-        };
-
-        for (const [tone, indicators] of Object.entries(toneIndicators)) {
-            if (indicators.some(indicator => title.includes(indicator))) {
-                return tone;
-            }
+    analyzeTone(title, genres) {
+        if (title.includes('dark') || title.includes('grim') || title.includes('murder')) {
+            return 'dark';
+        } else if (title.includes('funny') || title.includes('comedy') || title.includes('light')) {
+            return 'lighthearted';
+        } else if (title.includes('romance') || title.includes('love')) {
+            return 'romantic';
+        } else if (title.includes('suspense') || title.includes('thriller')) {
+            return 'suspenseful';
+        } else if (genres.includes('action')) {
+            return 'exciting';
+        } else {
+            return 'neutral';
         }
-
-        return 'neutral';
     }
 
     determineAudience(genres) {
         if (genres.includes('horror') || genres.includes('thriller')) {
             return 'adult';
-        } else if (genres.includes('comedy') || genres.includes('animation')) {
-            return 'family';
-        } else if (genres.includes('romance')) {
+        } else if (genres.includes('comedy') || genres.includes('romance')) {
             return 'teen-adult';
         } else {
             return 'general';
         }
     }
 
+    // ACTUALLY process the user query
     processUserQuery(query) {
-        // Convert natural language query to search criteria
-        const searchCriteria = {
-            original_query: query,
-            preferred_genres: this.extractGenresFromQuery(query),
-            excluded_genres: this.extractExclusions(query),
-            preferred_themes: this.extractThemesFromQuery(query),
-            preferred_tone: this.analyzeQueryTone(query)
-        };
-
-        // Generate search vector based on criteria
-        searchCriteria.search_vector = this.generateSearchVector(searchCriteria);
-        
-        return searchCriteria;
-    }
-
-    extractGenresFromQuery(query) {
-        const genres = [];
         const queryLower = query.toLowerCase();
         
-        if (queryLower.includes('comedy') || queryLower.includes('funny')) {
-            genres.push('comedy');
+        let intent = "general";
+        let preferredGenres = [];
+        let excludedGenres = [];
+        let preferredThemes = [];
+        let preferredTone = "neutral";
+
+        // Analyze query for intent
+        if (queryLower.includes('romantic') || queryLower.includes('romance') || queryLower.includes('love')) {
+            intent = "romance";
+            preferredGenres.push('romance');
+            preferredThemes.push('romance');
+            preferredTone = 'romantic';
         }
-        if (queryLower.includes('drama') || queryLower.includes('serious')) {
-            genres.push('drama');
+        
+        if (queryLower.includes('comedy') || queryLower.includes('funny') || queryLower.includes('humor')) {
+            intent = intent === "romance" ? "romantic comedy" : "comedy";
+            preferredGenres.push('comedy');
+            preferredThemes.push('comedy');
+            preferredTone = 'lighthearted';
         }
+        
         if (queryLower.includes('action') || queryLower.includes('adventure')) {
-            genres.push('action');
+            intent = "action";
+            preferredGenres.push('action');
+            preferredThemes.push('action');
+            preferredTone = 'exciting';
         }
-        if (queryLower.includes('thriller') || queryLower.includes('suspense')) {
-            genres.push('thriller');
-        }
-        if (queryLower.includes('romance') || queryLower.includes('love')) {
-            genres.push('romance');
-        }
-        if (queryLower.includes('horror') || queryLower.includes('scary')) {
-            genres.push('horror');
-        }
-
-        return genres.length > 0 ? genres : ['drama', 'thriller'];
-    }
-
-    extractExclusions(query) {
-        const exclusions = [];
-        const queryLower = query.toLowerCase();
         
-        if (queryLower.includes('no comedy') || queryLower.includes('not funny')) {
-            exclusions.push('comedy');
+        if (queryLower.includes('thriller') || queryLower.includes('suspense') || queryLower.includes('mystery')) {
+            intent = "thriller";
+            preferredGenres.push('thriller');
+            preferredTone = 'suspenseful';
         }
+        
+        if (queryLower.includes('drama')) {
+            intent = "drama";
+            preferredGenres.push('drama');
+        }
+
+        if (queryLower.includes('sci-fi') || queryLower.includes('science fiction')) {
+            intent = "sci-fi";
+            preferredGenres.push('sci-fi');
+            preferredThemes.push('science fiction');
+        }
+
+        // Extract exclusions
         if (queryLower.includes('no horror') || queryLower.includes('not scary')) {
-            exclusions.push('horror');
+            excludedGenres.push('horror');
         }
-        if (queryLower.includes('no romance')) {
-            exclusions.push('romance');
+        if (queryLower.includes('no action')) {
+            excludedGenres.push('action');
+        }
+        if (queryLower.includes('no comedy')) {
+            excludedGenres.push('comedy');
         }
 
-        return exclusions;
+        // Remove duplicates
+        preferredGenres = [...new Set(preferredGenres)];
+        preferredThemes = [...new Set(preferredThemes)];
+
+        // If no specific intent detected, use general
+        if (intent === "general") {
+            preferredGenres = ['drama', 'comedy']; // Default fallback
+        }
+
+        return {
+            original_query: query,
+            intent: intent,
+            preferred_genres: preferredGenres,
+            excluded_genres: excludedGenres,
+            preferred_themes: preferredThemes,
+            preferred_tone: preferredTone
+        };
     }
 
-    extractThemesFromQuery(query) {
-        const themes = [];
-        const queryLower = query.toLowerCase();
+    calculateMatchScore(movie, searchCriteria) {
+        let score = 0;
+        const llmFeatures = this.llmFeatures[movie.id];
         
-        if (queryLower.includes('psychological') || queryLower.includes('mind')) {
-            themes.push('psychological');
-        }
-        if (queryLower.includes('family') || queryLower.includes('parent')) {
-            themes.push('family');
-        }
-        if (queryLower.includes('friendship') || queryLower.includes('friend')) {
-            themes.push('friendship');
-        }
-        if (queryLower.includes('revenge')) {
-            themes.push('revenge');
-        }
-
-        return themes;
-    }
-
-    analyzeQueryTone(query) {
-        const queryLower = query.toLowerCase();
+        // Genre matching (most important)
+        const genreMatches = llmFeatures.genres.filter(genre => 
+            searchCriteria.preferred_genres.includes(genre)
+        );
+        score += genreMatches.length * 0.4;
         
-        if (queryLower.includes('dark') || queryLower.includes('grim')) {
-            return 'dark';
-        } else if (queryLower.includes('light') || queryLower.includes('fun')) {
-            return 'lighthearted';
-        } else if (queryLower.includes('suspenseful') || queryLower.includes('tense')) {
-            return 'suspenseful';
-        } else {
-            return 'neutral';
-        }
-    }
-
-    generateSearchVector(searchCriteria) {
-        // Create a simple search vector based on criteria
-        // In a real implementation, this would use sentence embeddings
-        const vector = new Array(50).fill(0);
+        // Theme matching
+        const themeMatches = llmFeatures.themes.filter(theme =>
+            searchCriteria.preferred_themes.includes(theme)
+        );
+        score += themeMatches.length * 0.3;
         
-        // Boost dimensions based on preferred genres
-        searchCriteria.preferred_genres.forEach(genre => {
-            const hash = this.stringToHash(genre) % 50;
-            vector[hash] += 0.3;
-        });
-        
-        // Penalize excluded genres
-        searchCriteria.excluded_genres.forEach(genre => {
-            const hash = this.stringToHash(genre) % 50;
-            vector[hash] -= 0.5;
-        });
-
-        return vector;
-    }
-
-    stringToHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-        }
-        return Math.abs(hash);
-    }
-
-    cosineSimilarity(vecA, vecB) {
-        const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-        const normA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-        const normB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-        return dotProduct / (normA * normB);
-    }
-
-    async getEnhancedRecommendations(userQuery, topK = 10) {
-        await this.initialize();
-        
-        // Process user query
-        const searchCriteria = this.processUserQuery(userQuery);
-        
-        // Get recommendations
-        const recommendations = [];
-        
-        for (let i = 0; i < this.itemEmbeddings.length; i++) {
-            const movie = this.movieData[i];
-            const llmFeatures = this.llmFeatures[movie.id];
-            
-            // Calculate similarity
-            const similarity = this.cosineSimilarity(
-                searchCriteria.search_vector, 
-                this.itemEmbeddings[i]
-            );
-            
-            // Apply genre filters
-            let finalScore = similarity;
-            if (searchCriteria.excluded_genres.some(genre => 
-                llmFeatures.genres.includes(genre))) {
-                finalScore *= 0.1; // Heavy penalty for excluded genres
-            }
-            
-            // Generate explanation
-            const explanation = this.generateExplanation(movie.title, searchCriteria, llmFeatures);
-            
-            recommendations.push({
-                id: movie.id,
-                title: movie.title,
-                score: finalScore,
-                llm_genres: llmFeatures.genres,
-                llm_themes: llmFeatures.themes,
-                llm_tone: llmFeatures.tone,
-                explanation: explanation,
-                year: movie.year || ''
-            });
+        // Tone matching
+        if (llmFeatures.tone === searchCriteria.preferred_tone) {
+            score += 0.2;
         }
         
-        // Sort by score and return top K
-        return recommendations
-            .sort((a, b) => b.score - a.score)
-            .slice(0, topK);
+        // Penalty for excluded genres
+        const hasExcludedGenre = llmFeatures.genres.some(genre =>
+            searchCriteria.excluded_genres.includes(genre)
+        );
+        if (hasExcludedGenre) {
+            score *= 0.1; // Heavy penalty
+        }
+        
+        // Add some randomness for variety
+        score += Math.random() * 0.1;
+        
+        return Math.min(score, 1.0); // Cap at 1.0
     }
 
     generateExplanation(movieTitle, searchCriteria, llmFeatures) {
@@ -323,44 +238,71 @@ class EnhancedTwoTower {
         }
         
         // Check theme matches
-        if (llmFeatures.themes.some(theme => 
-            searchCriteria.preferred_themes.includes(theme))) {
-            reasons.push('thematic depth');
+        const matchingThemes = searchCriteria.preferred_themes.filter(theme =>
+            llmFeatures.themes.includes(theme)
+        );
+        if (matchingThemes.length > 0) {
+            reasons.push(`${matchingThemes.join(', ')} themes`);
         }
         
         // Check tone matches
-        if (llmFeatures.tone === searchCriteria.preferred_tone && 
-            searchCriteria.preferred_tone !== 'neutral') {
+        if (llmFeatures.tone === searchCriteria.preferred_tone && searchCriteria.preferred_tone !== 'neutral') {
             reasons.push(`${llmFeatures.tone} atmosphere`);
         }
         
         if (reasons.length > 0) {
-            return `Recommended because it matches your interest in ${reasons.join(' and ')}`;
+            return `Matches your interest in ${reasons.join(' and ')}`;
         } else {
-            return 'Recommended based on high-quality content matching general preferences';
+            return 'High-quality content that aligns with general preferences';
         }
     }
 
-    // Keep traditional method for backward compatibility
+    async getEnhancedRecommendations(userQuery, topK = 10) {
+        await this.initialize();
+        
+        // ACTUALLY process the user query
+        const searchCriteria = this.processUserQuery(userQuery);
+        
+        // Calculate recommendations based on actual matching
+        const recommendations = this.movieData.map(movie => {
+            const llmFeatures = this.llmFeatures[movie.id];
+            const score = this.calculateMatchScore(movie, searchCriteria);
+            const explanation = this.generateExplanation(movie.title, searchCriteria, llmFeatures);
+            
+            return {
+                id: movie.id,
+                title: movie.title,
+                score: score,
+                llm_genres: llmFeatures.genres,
+                llm_themes: llmFeatures.themes,
+                llm_tone: llmFeatures.tone,
+                explanation: explanation,
+                year: movie.year
+            };
+        });
+        
+        // Filter out very low scores and sort
+        const filteredRecs = recommendations
+            .filter(rec => rec.score > 0.1)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, topK);
+        
+        return filteredRecs;
+    }
+
+    // Traditional method for user ID based recommendations
     async getTraditionalRecommendations(userId, topK = 10) {
         await this.initialize();
         
-        const userVector = this.userEmbeddings[userId];
-        const recommendations = [];
-        
-        for (let i = 0; i < this.itemEmbeddings.length; i++) {
-            const similarity = this.cosineSimilarity(userVector, this.itemEmbeddings[i]);
-            recommendations.push({
-                id: this.movieData[i].id,
-                title: this.movieData[i].title,
-                score: similarity,
-                year: this.movieData[i].year || ''
-            });
-        }
-        
-        return recommendations
-            .sort((a, b) => b.score - a.score)
-            .slice(0, topK);
+        // For demo purposes, return some sample recommendations
+        // In a real system, this would use actual user embeddings
+        const shuffled = [...this.movieData].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, topK).map((movie, index) => ({
+            id: movie.id,
+            title: movie.title,
+            score: (topK - index) * 0.1 + Math.random() * 0.1,
+            year: movie.year
+        }));
     }
 }
 
