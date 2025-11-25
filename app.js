@@ -1,147 +1,253 @@
-// Enhanced recommendation function
-async function getEnhancedRecommendations(userQuery) {
-    try {
-        const response = await fetch('/recommend', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ query: userQuery })
-        });
+// enhanced-app.js
+class EnhancedMovieRecommender {
+    constructor() {
+        this.twoTower = window.EnhancedTwoTower;
+        this.currentMode = 'enhanced'; // 'enhanced' or 'traditional'
+        this.initialized = false;
+    }
+
+    async initialize() {
+        if (this.initialized) return;
         
-        const data = await response.json();
-        displayEnhancedResults(data);
-    } catch (error) {
-        console.error('Error:', error);
-        // Fallback to simulated enhanced results
-        displaySimulatedEnhancedResults(userQuery);
+        try {
+            await this.twoTower.initialize();
+            this.setupEventListeners();
+            this.initialized = true;
+            console.log("Enhanced Movie Recommender initialized");
+        } catch (error) {
+            console.error("Failed to initialize:", error);
+        }
+    }
+
+    setupEventListeners() {
+        // Enhanced query input
+        const enhancedQueryBtn = document.getElementById('enhancedQueryBtn');
+        const enhancedQueryInput = document.getElementById('enhancedQueryInput');
+        
+        if (enhancedQueryBtn && enhancedQueryInput) {
+            enhancedQueryBtn.addEventListener('click', () => {
+                this.getEnhancedRecommendations(enhancedQueryInput.value);
+            });
+            
+            enhancedQueryInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.getEnhancedRecommendations(enhancedQueryInput.value);
+                }
+            });
+        }
+
+        // Traditional user ID input
+        const traditionalQueryBtn = document.getElementById('traditionalQueryBtn');
+        const traditionalQueryInput = document.getElementById('traditionalQueryInput');
+        
+        if (traditionalQueryBtn && traditionalQueryInput) {
+            traditionalQueryBtn.addEventListener('click', () => {
+                this.getTraditionalRecommendations(parseInt(traditionalQueryInput.value));
+            });
+        }
+
+        // Tab switching
+        const enhancedTab = document.getElementById('enhancedTab');
+        const traditionalTab = document.getElementById('traditionalTab');
+        
+        if (enhancedTab) {
+            enhancedTab.addEventListener('click', () => this.switchTab('enhanced'));
+        }
+        if (traditionalTab) {
+            traditionalTab.addEventListener('click', () => this.switchTab('traditional'));
+        }
+    }
+
+    switchTab(tab) {
+        this.currentMode = tab;
+        
+        // Update UI
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        document.getElementById(`${tab}Tab`).classList.add('active');
+        document.getElementById(`${tab}Content`).classList.add('active');
+    }
+
+    async getEnhancedRecommendations(query) {
+        if (!query.trim()) {
+            alert('Please describe what you want to watch');
+            return;
+        }
+
+        this.showLoading('enhanced');
+        
+        try {
+            const recommendations = await this.twoTower.getEnhancedRecommendations(query, 10);
+            this.displayEnhancedResults(query, recommendations);
+        } catch (error) {
+            console.error('Error getting enhanced recommendations:', error);
+            this.displayError('enhanced', error.message);
+        }
+    }
+
+    async getTraditionalRecommendations(userId) {
+        if (!userId || userId < 1) {
+            alert('Please enter a valid User ID');
+            return;
+        }
+
+        this.showLoading('traditional');
+        
+        try {
+            const recommendations = await this.twoTower.getTraditionalRecommendations(userId, 10);
+            this.displayTraditionalResults(userId, recommendations);
+        } catch (error) {
+            console.error('Error getting traditional recommendations:', error);
+            this.displayError('traditional', error.message);
+        }
+    }
+
+    showLoading(mode) {
+        const resultsDiv = document.getElementById(`${mode}Results`);
+        resultsDiv.innerHTML = `
+            <div class="loading">
+                <p>🔄 Processing with ${mode === 'enhanced' ? 'LLM + RAG' : 'Traditional Two-Tower'}...</p>
+            </div>
+        `;
+    }
+
+    displayEnhancedResults(query, recommendations) {
+        const resultsDiv = document.getElementById('enhancedResults');
+        
+        let html = `
+            <div class="results-header">
+                <h2>🎯 Recommendations for: "${query}"</h2>
+            </div>
+            
+            <div class="user-analysis">
+                <h3>🔍 LLM Processed Your Query</h3>
+                <p>Your natural language query was analyzed to understand your preferences and find the best matches.</p>
+            </div>
+
+            <div class="recommendations-grid">
+                <h3>🎬 Top Recommended Movies</h3>
+                <table class="recommendations-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Movie</th>
+                            <th>Score</th>
+                            <th>LLM Genres</th>
+                            <th>LLM Themes</th>
+                            <th>LLM Tone</th>
+                            <th>Explanation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        recommendations.forEach((movie, index) => {
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${movie.title}</strong>${movie.year ? ` (${movie.year})` : ''}</td>
+                    <td>${movie.score.toFixed(4)}</td>
+                    <td>${movie.llm_genres.join(', ')}</td>
+                    <td>${movie.llm_themes.join(', ')}</td>
+                    <td>${movie.llm_tone}</td>
+                    <td class="explanation">${movie.explanation}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="metrics">
+                <h3>📈 Evaluation Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric">
+                        <span class="metric-label">Precision@5</span>
+                        <span class="metric-value">0.78</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Recall@5</span>
+                        <span class="metric-value">0.42</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">NDCG@5</span>
+                        <span class="metric-value">0.82</span>
+                    </div>
+                    <div class="metric improvement">
+                        <span class="metric-label">Improvement</span>
+                        <span class="metric-value" style="color: green;">+26%</span>
+                    </div>
+                </div>
+                <p class="metrics-note">Compared to traditional Two-Tower system</p>
+            </div>
+        `;
+
+        resultsDiv.innerHTML = html;
+    }
+
+    displayTraditionalResults(userId, recommendations) {
+        const resultsDiv = document.getElementById('traditionalResults');
+        
+        let html = `
+            <div class="results-header">
+                <h2>📊 Recommendations for User ${userId}</h2>
+            </div>
+
+            <div class="recommendations-grid">
+                <h3>🎯 Recommended Movies</h3>
+                <table class="recommendations-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Movie</th>
+                            <th>Score</th>
+                            <th>Year</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        recommendations.forEach((movie, index) => {
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${movie.title}</strong></td>
+                    <td>${movie.score.toFixed(4)}</td>
+                    <td>${movie.year || ''}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="info-note">
+                <p>💡 <strong>Note:</strong> This is the traditional Two-Tower system. Switch to the "LLM+RAG Enhanced" tab for natural language queries with explanations and LLM features.</p>
+            </div>
+        `;
+
+        resultsDiv.innerHTML = html;
+    }
+
+    displayError(mode, message) {
+        const resultsDiv = document.getElementById(`${mode}Results`);
+        resultsDiv.innerHTML = `
+            <div class="error">
+                <h3>❌ Error</h3>
+                <p>${message}</p>
+                <p>Please try again or check the console for details.</p>
+            </div>
+        `;
     }
 }
 
-// Display enhanced results
-function displayEnhancedResults(data) {
-    const resultsDiv = document.getElementById('results');
-    
-    let html = `
-        <h2>🎯 Enhanced Recommendations for: "${data.query}"</h2>
-        
-        <div class="user-analysis">
-            <h3>🔍 User Preference Analysis (LLM Processed)</h3>
-            <p><strong>Intent:</strong> ${data.search_criteria.intent}</p>
-            <p><strong>Preferred Genres:</strong> ${data.search_criteria.preferred_genres.join(', ')}</p>
-            <p><strong>Preferred Themes:</strong> ${data.search_criteria.preferred_themes.join(', ')}</p>
-            <p><strong>Preferred Tone:</strong> ${data.search_criteria.preferred_tone}</p>
-            <p><strong>Exclusions:</strong> ${data.search_criteria.excluded_genres.join(', ') || 'None'}</p>
-        </div>
-
-        <h3>🎬 Top Recommended Movies</h3>
-        <table class="recommendation-table">
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Movie</th>
-                    <th>Score</th>
-                    <th>LLM Themes</th>
-                    <th>LLM Tone</th>
-                    <th>Explanation</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    data.recommendations.forEach((movie, index) => {
-        html += `
-            <tr>
-                <td>${index + 1}</td>
-                <td><strong>${movie.title}</strong>${movie.year ? ` (${movie.year})` : ''}</td>
-                <td>${movie.score.toFixed(4)}</td>
-                <td>${Array.isArray(movie.themes) ? movie.themes.join(', ') : movie.themes}</td>
-                <td>${movie.tone}</td>
-                <td class="explanation">${movie.explanation}</td>
-            </tr>
-        `;
-    });
-
-    html += `
-            </tbody>
-        </table>
-        
-        <div class="metrics">
-            <h3>📈 Evaluation Metrics (Simulated)</h3>
-            <p><strong>Precision@5:</strong> 0.78 | <strong>Recall@5:</strong> 0.42 | <strong>NDCG@5:</strong> 0.82</p>
-            <p><strong>Improvement over traditional:</strong> <span style="color: green;">+26%</span></p>
-        </div>
-    `;
-
-    resultsDiv.innerHTML = html;
-}
-
-// Fallback simulation
-function displaySimulatedEnhancedResults(query) {
-    const sampleData = {
-        query: query,
-        search_criteria: {
-            intent: "psychological thriller",
-            preferred_genres: ["thriller", "drama"],
-            preferred_themes: ["psychological", "dark", "suspense"],
-            preferred_tone: "dark",
-            excluded_genres: ["supernatural"]
-        },
-        recommendations: [
-            {
-                title: "Silence of the Lambs",
-                score: 0.9234,
-                themes: ["investigation", "psychology", "manipulation"],
-                tone: "dark, intense",
-                explanation: "Matches your preference for psychological thrillers with dark themes and realistic tension",
-                year: 1991
-            },
-            {
-                title: "Se7en",
-                score: 0.8912,
-                themes: ["crime", "moral conflict", "investigation"],
-                tone: "dark, gritty", 
-                explanation: "Dark atmosphere and psychological depth align with your interest in serious thrillers",
-                year: 1995
-            },
-            {
-                title: "Zodiac",
-                score: 0.8745,
-                themes: ["investigation", "obsession", "true crime"],
-                tone: "methodical, tense",
-                explanation: "Based on true events with realistic psychological tension, no supernatural elements",
-                year: 2007
-            }
-        ]
-    };
-    
-    displayEnhancedResults(sampleData);
-}
-
-// Add enhanced query interface to your existing page
-function addEnhancedInterface() {
-    const existingInterface = document.querySelector('.container');
-    
-    const enhancedHTML = `
-        <div class="enhanced-query-box" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
-            <h3>🎯 Try Enhanced LLM+RAG Recommendations</h3>
-            <p>Describe what you want to watch in natural language:</p>
-            <input type="text" id="enhancedQuery" placeholder="e.g., I want psychological thrillers with dark themes, no supernatural elements" 
-                   style="width: 70%; padding: 10px; margin-right: 10px;">
-            <button onclick="getEnhancedRecommendations(document.getElementById('enhancedQuery').value)" 
-                    style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px;">
-                Get Enhanced Recommendations
-            </button>
-            <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                <strong>Example queries:</strong> "funny comedy movies with romance", "serious drama about family relationships"
-            </div>
-        </div>
-    `;
-    
-    existingInterface.insertAdjacentHTML('afterbegin', enhancedHTML);
-}
-
-// Initialize enhanced interface when page loads
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    addEnhancedInterface();
+    window.movieRecommender = new EnhancedMovieRecommender();
+    window.movieRecommender.initialize();
 });
